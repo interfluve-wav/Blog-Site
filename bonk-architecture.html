@@ -1,0 +1,281 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Bonk! — Application overview</title>
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <style>
+    :root {
+      --bg: #020617;
+      --card: #0f172a;
+      --text: #f8fafc;
+      --muted: #94a3b8;
+      --cyan: #22d3ee;
+      --emerald: #34d399;
+      --violet: #a78bfa;
+      --amber: #fbbf24;
+      --rose: #fb7185;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: "JetBrains Mono", ui-monospace, monospace;
+      background: var(--bg);
+      color: var(--text);
+      line-height: 1.55;
+      font-size: 13px;
+      padding: 28px 24px 56px;
+      max-width: 960px;
+      margin-inline: auto;
+    }
+    header {
+      margin-bottom: 24px;
+      border-bottom: 1px solid #1e293b;
+      padding-bottom: 20px;
+    }
+    h1 {
+      font-size: 1.45rem;
+      font-weight: 700;
+      margin: 0 0 8px;
+      letter-spacing: -0.02em;
+    }
+    .lede { color: #cbd5e1; max-width: 78ch; margin: 0; }
+    h2 {
+      font-size: 0.9rem;
+      font-weight: 600;
+      color: var(--cyan);
+      margin: 28px 0 12px;
+      text-transform: uppercase;
+      letter-spacing: 0.07em;
+    }
+    h3 { font-size: 12px; margin: 16px 0 8px; color: #e2e8f0; }
+    p { margin: 0 0 12px; color: #cbd5e1; max-width: 78ch; }
+    ul { margin: 0 0 12px; padding-left: 1.2em; color: #cbd5e1; max-width: 78ch; }
+    li { margin-bottom: 6px; }
+    .diagram-wrap {
+      background: var(--card);
+      border: 1px solid #1e293b;
+      border-radius: 12px;
+      padding: 16px;
+      margin: 16px 0 24px;
+      overflow-x: auto;
+    }
+    svg { display: block; max-width: 100%; height: auto; }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 11px;
+      margin: 12px 0;
+    }
+    th, td {
+      border: 1px solid #334155;
+      padding: 8px 10px;
+      text-align: left;
+      vertical-align: top;
+    }
+    th { background: #1e293b; color: var(--cyan); font-weight: 600; }
+    td { color: #cbd5e1; }
+    td:first-child { white-space: nowrap; color: #e2e8f0; font-weight: 500; }
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+      gap: 12px;
+      margin: 12px 0;
+    }
+    .card {
+      background: var(--card);
+      border: 1px solid #1e293b;
+      border-radius: 10px;
+      padding: 14px 16px;
+    }
+    .card h3 { margin: 0 0 10px; font-size: 12px; color: white; }
+    .card ul { font-size: 11px; margin: 0; padding-left: 1.1em; color: var(--muted); max-width: none; }
+    .card li { margin-bottom: 5px; }
+    .note {
+      border-left: 3px solid var(--amber);
+      padding: 10px 14px;
+      background: rgba(120, 53, 15, 0.2);
+      border-radius: 0 8px 8px 0;
+      font-size: 11px;
+      color: #fde68a;
+      margin: 16px 0;
+      max-width: 78ch;
+    }
+    footer {
+      margin-top: 36px;
+      padding-top: 16px;
+      border-top: 1px solid #1e293b;
+      font-size: 10px;
+      color: var(--muted);
+    }
+    code { font-size: 0.92em; color: var(--emerald); }
+  </style>
+</head>
+<body>
+
+  <header>
+    <h1>Bonk!</h1>
+    <p class="lede">
+      Desktop app for DJs: edit music metadata, manage playlists, and stay in sync with
+      <strong>Rekordbox 6/7</strong> — or work file-first with folder import and Quick Tag.
+      Built as <strong>Electron + React</strong> with a strict split: the UI never touches Node;
+      everything system-related goes through <code>window.electronAPI</code>.
+    </p>
+  </header>
+
+  <h2>What you can do</h2>
+  <ul>
+    <li><strong>Rekordbox</strong> — Import/export encrypted <code>master.db</code> via a Python bridge (<code>rekordbox_bridge.py</code> + vendored pyrekordbox).</li>
+    <li><strong>Library mode</strong> — Virtualized track table, playlist tree, smart playlists, search index, column layout, track editor panel.</li>
+    <li><strong>Folder import</strong> — Scan folders, read tags, optional enrichment flows; file-scoped writes where those modes apply.</li>
+    <li><strong>Quick Tag</strong> — Single-folder fast tagging with Rust-backed playback and waveform.</li>
+    <li><strong>Analysis</strong> — Key (KeyFinder CLI), BPM (aubio), waveforms (Rust + cache), optional batch wizards.</li>
+    <li><strong>AutoTag / Find Tags</strong> — Multi-provider metadata lookup (Spotify, Discogs, MusicBrainz, etc.) orchestrated from the main process.</li>
+    <li><strong>Format tools</strong> — Transcode and tag tooling using FFmpeg and TagLib-style writers where safe.</li>
+    <li><strong>Extras</strong> — Chapter Builder, Graph Playlist, analytics, download helpers, multi-library converters — entered from the shell as full views or modals.</li>
+  </ul>
+
+  <h2>Process architecture</h2>
+  <p>
+    Three layers: <strong>main</strong> (Node, IPC, spawns, SQLite media cache), <strong>preload</strong> (exposes one API object), <strong>renderer</strong> (React, Zustand, workers).
+    The renderer calls <code>electronAPI</code>; the main process validates paths, runs Python, loads <code>native-audio</code>, and talks to disk.
+  </p>
+
+  <div class="diagram-wrap">
+    <svg viewBox="0 0 880 420" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Bonk process architecture">
+      <defs>
+        <pattern id="grid" width="40" height="40" patternUnits="userSpaceOnUse">
+          <path d="M 40 0 L 0 0 0 40" fill="none" stroke="#1e293b" stroke-width="0.5"/>
+        </pattern>
+        <marker id="arr" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
+          <polygon points="0 0, 10 3.5, 0 7" fill="#64748b"/>
+        </marker>
+      </defs>
+      <rect width="100%" height="100%" fill="url(#grid)"/>
+
+      <g fill="none" stroke="#64748b" stroke-width="1.5" marker-end="url(#arr)">
+        <path d="M 440 118 L 440 152"/>
+        <path d="M 440 232 L 440 266"/>
+        <path d="M 440 346 L 440 380"/>
+        <path d="M 440 92 L 440 92"/>
+      </g>
+
+      <!-- Main -->
+      <rect x="120" y="24" width="640" height="88" rx="8" fill="#0f172a" stroke="#34d399" stroke-width="1.5"/>
+      <rect x="120" y="24" width="640" height="88" rx="8" fill="rgba(6,78,59,0.25)"/>
+      <text x="440" y="52" fill="white" font-size="12" font-weight="600" text-anchor="middle">Electron main process</text>
+      <text x="440" y="72" fill="#94a3b8" font-size="9" text-anchor="middle">electron.js · ipcMain handlers · src/main/ipc/*.js</text>
+      <text x="440" y="88" fill="#94a3b8" font-size="8" text-anchor="middle">Spawns: Python bridge, FFmpeg/ffprobe, keyfinder-cli, aubio · Loads: native-audio, better-sqlite3, sharp, node-taglib-sharp</text>
+      <text x="440" y="102" fill="#94a3b8" font-size="8" text-anchor="middle">Media cache SQLite · user config JSON · path validation on user-controlled paths</text>
+
+      <!-- Preload -->
+      <rect x="200" y="152" width="480" height="72" rx="8" fill="#0f172a" stroke="#fbbf24" stroke-width="1.5"/>
+      <rect x="200" y="152" width="480" height="72" rx="8" fill="rgba(120,53,15,0.25)"/>
+      <text x="440" y="178" fill="white" font-size="12" font-weight="600" text-anchor="middle">preload.js</text>
+      <text x="440" y="198" fill="#94a3b8" font-size="9" text-anchor="middle">contextBridge → window.electronAPI (invoke-only surface to the renderer)</text>
+      <text x="440" y="212" fill="#94a3b8" font-size="8" text-anchor="middle">No nodeIntegration in renderer · contextIsolation on</text>
+
+      <!-- Renderer -->
+      <rect x="80" y="266" width="720" height="96" rx="8" fill="#0f172a" stroke="#22d3ee" stroke-width="1.5"/>
+      <rect x="80" y="266" width="720" height="96" rx="8" fill="rgba(8,51,68,0.3)"/>
+      <text x="440" y="292" fill="white" font-size="12" font-weight="600" text-anchor="middle">Renderer — Vite + React + TypeScript (src/)</text>
+      <text x="440" y="312" fill="#94a3b8" font-size="9" text-anchor="middle">App.tsx, TrackTable (@tanstack/react-virtual), PlaylistSidebar, modals, feature screens</text>
+      <text x="440" y="328" fill="#94a3b8" font-size="8" text-anchor="middle">Zustand: library, settings, player, columns, autotag, album art… · filterWorker for heavy filters</text>
+      <text x="440" y="344" fill="#94a3b8" font-size="8" text-anchor="middle">All file, DB, audio, and tag I/O via electronAPI — never require('fs') in the UI</text>
+
+      <!-- Side: Python / Rust -->
+      <rect x="24" y="24" width="76" height="88" rx="6" fill="#0f172a" stroke="#a78bfa" stroke-width="1.2"/>
+      <text x="62" y="56" fill="white" font-size="9" font-weight="600" text-anchor="middle">Python</text>
+      <text x="62" y="72" fill="#94a3b8" font-size="7" text-anchor="middle">rekordbox</text>
+      <text x="62" y="84" fill="#94a3b8" font-size="7" text-anchor="middle">bridge</text>
+      <text x="62" y="98" fill="#94a3b8" font-size="6" text-anchor="middle">JSON stdout</text>
+
+      <rect x="780" y="24" width="76" height="88" rx="6" fill="#0f172a" stroke="#a78bfa" stroke-width="1.2"/>
+      <text x="818" y="56" fill="white" font-size="9" font-weight="600" text-anchor="middle">Rust</text>
+      <text x="818" y="72" fill="#94a3b8" font-size="7" text-anchor="middle">native-</text>
+      <text x="818" y="84" fill="#94a3b8" font-size="7" text-anchor="middle">audio</text>
+      <text x="818" y="98" fill="#94a3b8" font-size="6" text-anchor="middle">N-API</text>
+
+      <path d="M 120 68 L 100 68" fill="none" stroke="#64748b" stroke-width="1.2" marker-end="url(#arr)"/>
+      <path d="M 760 68 L 780 68" fill="none" stroke="#64748b" stroke-width="1.2" marker-end="url(#arr)"/>
+
+      <text x="440" y="400" fill="#64748b" font-size="8" text-anchor="middle">IPC: ipcMain.handle channels registered in src/main/ipc — mirrored in preload.js and typed in App.tsx</text>
+    </svg>
+  </div>
+
+  <h2>Technology stack (short)</h2>
+  <table>
+    <thead>
+      <tr><th>Layer</th><th>Tech</th></tr>
+    </thead>
+    <tbody>
+      <tr><td>Shell</td><td>Electron 41</td></tr>
+      <tr><td>UI</td><td>React 18, TypeScript 5, Vite 8, Zustand</td></tr>
+      <tr><td>Lists</td><td>@tanstack/react-virtual (custom TrackTable, not react-table)</td></tr>
+      <tr><td>Audio playback / waveform</td><td>Rust module (Symphonia + rodio) in <code>native-audio/</code></td></tr>
+      <tr><td>Rekordbox DB</td><td><code>rekordbox_bridge.py</code> + pyrekordbox (SQLCipher <code>master.db</code>)</td></tr>
+      <tr><td>Tags</td><td>node-taglib-sharp, music-metadata, ffmetadata for fragile formats</td></tr>
+      <tr><td>Media cache</td><td>better-sqlite3 — album art, waveforms, cues, BPM cache, etc.</td></tr>
+    </tbody>
+  </table>
+
+  <h2>Where state and files live</h2>
+  <div class="grid">
+    <div class="card">
+      <h3>On disk (typical)</h3>
+      <ul>
+        <li><code>userData/Config/bonk-user-config.json</code> — settings</li>
+        <li><code>userData/bonk-media-cache.sqlite</code> — art, waveforms, cues</li>
+        <li>Rekordbox paths — Pioneer folders; app can import/export DB and XML per flows</li>
+      </ul>
+    </div>
+    <div class="card">
+      <h3>In memory (renderer)</h3>
+      <ul>
+        <li>Full library snapshot in Zustand while a session is loaded</li>
+        <li>Search index (n-grams) for fast filtering</li>
+        <li>LRU-style caches for album art thumbnails in the UI layer</li>
+      </ul>
+    </div>
+    <div class="card">
+      <h3>Heavy work off the UI thread</h3>
+      <ul>
+        <li><code>filterWorker.ts</code> for large libraries</li>
+        <li>Main process for I/O, Python, FFmpeg, and native audio</li>
+      </ul>
+    </div>
+  </div>
+
+  <h2>Major UI modes</h2>
+  <table>
+    <thead>
+      <tr><th>Mode / surface</th><th>Role</th></tr>
+    </thead>
+    <tbody>
+      <tr><td>Welcome / home</td><td>Load library, import folder, open Rekordbox DB, jump to feature screens</td></tr>
+      <tr><td>Library</td><td>Playlist sidebar + virtual track table + editor; primary DJ catalog view</td></tr>
+      <tr><td>Quick Tag</td><td>Folder pick → scan → condensed tagging with player</td></tr>
+      <tr><td>AutoTag / Audio features</td><td>Wizards driven by main-process orchestration + IPC progress</td></tr>
+      <tr><td>Chapter Builder / Graph Playlist</td><td>Full-screen creative tools; save playlists back into the library</td></tr>
+      <tr><td>Settings &amp; modals</td><td>API keys, tagging prefs, downloaders, Rekordbox paths, developer toggles</td></tr>
+    </tbody>
+  </table>
+
+  <div class="note">
+    <strong>Product constraint (agents):</strong> Treat QuickTag and some import flows as file-scoped: only write fields the user changed.
+    Rating authority is <code>ratingByte</code> / POPM <code>bonk@suh</code> where applicable; do not redesign metadata write semantics casually.
+  </div>
+
+  <h2>How to run it (dev)</h2>
+  <p style="font-size:11px;color:#94a3b8;">
+    <code>npm install</code> · <code>pip3 install -r requirements.txt</code> (for Rekordbox features) · <code>npm run dev</code>.
+    Typecheck: <code>npm run typecheck</code>. Ship build: <code>npm run build:electron</code>.
+    See repo <code>AGENTS.md</code> for the full command list and file map.
+  </p>
+
+  <footer>
+    Standalone overview for Bonk! — <code>interfluve-wav/bonk-new-exp</code>. Not a substitute for AGENTS.md / docs/ARCHITECTURE.md when implementing features.
+  </footer>
+</body>
+</html>
